@@ -14,6 +14,7 @@
         overflow: hidden;
       }
       #container {
+        position: relative;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -21,13 +22,41 @@
         height: 100vh;
         background-color: #ccc;
       }
+      .btnBox {
+        position: absolute;
+        top: 2.5vh;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .btnBox button {
+        width: 3rem;
+        height: 2rem;
+        margin-right: 10px;
+      }
     </style>
   </head>
   <body>
     <div id="container">
       <canvas id="canvas" width="1200" height="900"></canvas>
+      <div class="btnBox">
+        <button id="start">start</button>
+        <button id="stop">stop</button>
+      </div>
     </div>
     <script>
+      //控制器
+      const controller = {
+        start: false,
+        stop: true,
+      };
+      document.getElementById("start").addEventListener("click", () => {
+        controller.start = true;
+        controller.stop = false;
+      });
+      document.getElementById("stop").addEventListener("click", () => {
+        controller.start = false;
+        controller.stop = true;
+      });
       //获取canvas
       const canvas = document.getElementById("canvas");
       //获取canvas的上下文
@@ -87,6 +116,13 @@
             ctx.fillStyle = "#000";
           } else {
             ctx.fillStyle = "#6639ba";
+          }
+          if (this.landedOrder + 1) {
+            ctx.fillText(
+              `第${this.landedOrder + 1}位`,
+              Math.round(this.x - 16),
+              Math.round(this.y - 16)
+            );
           }
           ctx.beginPath();
           ctx.arc(this.x, this.y, this.width, 0, Math.PI * 2);
@@ -232,10 +268,14 @@
         const now = performance.now();
         const delta = now - lastTime;
         lastTime = now;
-        drawBackground(); // 清屏
-        for (let p of paratrooperList) {
-          p.update(delta / 1000); // 如果 update 之后要处理运动
-          p.draw();
+        if (controller.stop) {
+        }
+        if (controller.start && !controller.stop) {
+          drawBackground(); // 清屏
+          for (let p of paratrooperList) {
+            p.update(delta / 1000); // 如果 update 之后要处理运动
+            p.draw();
+          }
         }
         requestAnimationFrame(animate);
       }
