@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paratrooper</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: #000;
+        overflow: hidden;
+      }
+      #container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        background-color: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <canvas id="canvas" width="1200" height="900"></canvas>
+    </div>
+    <script>
+      //获取canvas
+      const canvas = document.getElementById("canvas");
+      //获取canvas的上下文
+      const ctx = canvas.getContext("2d");
+      //绘制地面坐标原点
+      const groundStartX = canvas.width / 2 - (canvas.width * 0.76) / 2;
+      const groundStartY = canvas.height / 2 - (canvas.height * 0.76) / 2;
+      //绘制地面宽高
+      const groundWidth = canvas.width * 0.76;
+      const groundHeight = canvas.height * 0.76;
+      //地面边界位置
+      const groundLeftX = groundStartX; //左边界
+      const groundRightX = groundStartX + groundWidth; //右边界
+      const groundTopY = groundStartY; //上边界
+      const groundBottomY = groundStartY + groundHeight; //下边界
+      function drawBackground() {
+        //设置canvas的背景色
+        ctx.fillStyle = "#87CEEB";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        //绘制地面
+        ctx.fillStyle = "#fff";
+        //填充地面
+        ctx.fillRect(groundStartX, groundStartY, groundWidth, groundHeight);
+      }
+      drawBackground();
+      class Paratrooper {
+        constructor() {
+          this.x = this.generateInitPositionX();
+          this.y = this.generateInitPositionY(this.x);
+          this.landedX = this.generateLandedPositionX();
+          this.landedY = this.generateLandedPositionY();
+          this.width = 40;
+          this.speed = 2;
+          this.flySpeed = 2;
+          this.isLanded = false;
+          this.alpha = 0.3;
+        }
+        draw() {
+          if (!this.isLanded) {
+            ctx.fillStyle = `rgba(0,0,0,${this.alpha})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.width, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+            return;
+          }
+          ctx.fillStyle = "#000";
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.width, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        update() {
+          if (!this.isLanded) {
+            const dx = this.landedX - this.x;
+            const dy = this.landedY - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const dWidth = this.width - 4;
+            const dAlpha = 1 - this.alpha;
+            if (dist < 1) {
+              this.isLanded = true;
+              this.width = 4;
+              return;
+            }
+            this.width -= dWidth / dist;
+            this.alpha += dAlpha / dist;
+            this.x += (dx / dist) * this.flySpeed;
+            this.y += (dy / dist) * this.flySpeed;
+            return;
+          }
+        }
+
+        generateLandedPositionX() {
+          const randomSeed = Math.random();
+          if (randomSeed <= 0.5) {
+            return (Math.random() * groundWidth) / 2 + groundLeftX;
+          } else {
+            return (Math.random() * groundWidth) / 2 + canvas.width / 2;
+          }
+        }
+        generateLandedPositionY() {
+          const randomSeed = Math.random();
+          if (randomSeed <= 0.5) {
+            return (Math.random() * groundHeight) / 2 + groundTopY;
+          } else {
+            return (Math.random() * groundHeight) / 2 + canvas.height / 2;
+          }
+        }
+
+        //生成初始位置 X 坐标
+        generateInitPositionX() {
+          const randomSeed = Math.random();
+          if (randomSeed <= 0.5) {
+            return (Math.random() * canvas.width) / 2;
+          } else {
+            return (Math.random() * canvas.width) / 2 + canvas.width / 2;
+          }
+        }
+        //生成初始位置 Y 坐标
+
+        generateInitPositionY(positionX) {
+          const randomSeed = Math.random();
+          if (randomSeed <= 0.5) {
+            if (positionX <= groundLeftX || positionX >= groundRightX) {
+              return (Math.random() * canvas.height) / 2;
+            } else {
+              return Math.random() * groundTopY;
+            }
+          } else {
+            if (positionX <= groundLeftX || positionX >= groundRightX) {
+              return (Math.random() * canvas.height) / 2 + canvas.height / 2;
+            } else {
+              return Math.random() * groundTopY + groundBottomY;
+            }
+          }
+        }
+      }
+      const paratrooperList = new Array(100)
+        .fill(0)
+        .map(() => new Paratrooper());
+      console.log(paratrooperList);
+      function animate() {
+        // ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawBackground(); // 清屏
+        for (let p of paratrooperList) {
+          p.update(); // 如果 update 之后要处理运动
+          p.draw();
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+  </body>
+</html>
