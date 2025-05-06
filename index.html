@@ -54,16 +54,24 @@
         ctx.fillRect(groundStartX, groundStartY, groundWidth, groundHeight);
       }
       drawBackground();
+      const landedList = [];
       class Paratrooper {
         constructor() {
           this.x = this.generateInitPositionX();
           this.y = this.generateInitPositionY(this.x);
           this.landedX = this.generateLandedPositionX();
           this.landedY = this.generateLandedPositionY();
+          this.destinationX = this.generateLandedPositionX();
+          this.destinationY = this.generateLandedPositionY();
           this.width = 40;
-          this.speed = 2;
-          this.flySpeed = 2;
+          this.speed = 15;
+          this.flySpeed = 50;
           this.isLanded = false;
+          this.landedOrder = NaN;
+          this.parent = null;
+          this.offsetX = 0;
+          this.offsetY = 0;
+          this.children = [];
           this.alpha = 0.3;
         }
         draw() {
@@ -75,13 +83,17 @@
             ctx.fill();
             return;
           }
-          ctx.fillStyle = "#000";
+          if (this.parent) {
+            ctx.fillStyle = "#000";
+          } else {
+            ctx.fillStyle = "#6639ba";
+          }
           ctx.beginPath();
           ctx.arc(this.x, this.y, this.width, 0, Math.PI * 2);
           ctx.closePath();
           ctx.fill();
         }
-        update() {
+        update(deltaTime) {
           if (!this.isLanded) {
             const dx = this.landedX - this.x;
             const dy = this.landedY - this.y;
@@ -89,15 +101,79 @@
 
             const dWidth = this.width - 4;
             const dAlpha = 1 - this.alpha;
-            if (dist < 1) {
+            if (dist < 3) {
               this.isLanded = true;
               this.width = 4;
+              landedList.push(this);
+              this.landedOrder = landedList.length - 1;
               return;
             }
             this.width -= dWidth / dist;
             this.alpha += dAlpha / dist;
-            this.x += (dx / dist) * this.flySpeed;
-            this.y += (dy / dist) * this.flySpeed;
+            this.x += (dx / dist) * this.flySpeed * deltaTime;
+            this.y += (dy / dist) * this.flySpeed * deltaTime;
+            return;
+          }
+          if (!this.parent && this.isLanded) {
+            for (let i = 0; i < this.landedOrder; i++) {
+              if (i == this.landedOrder) {
+                continue;
+              }
+              const other = landedList[i];
+              const dx = this.x - other.x;
+              const dy = this.y - other.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < 30) {
+                this.parent = other; // 被捕捉
+                other.children.push(this);
+                this.offsetX = this.x - other.x; // 保持相对位置
+                this.offsetY = this.y - other.y; // 保持相对位置
+                break;
+              }
+            }
+
+            for (let child of this.children) {
+              if (
+                child.x < groundLeftX ||
+                child.x > groundRightX ||
+                child.y < groundTopY ||
+                child.y > groundBottomY
+              ) {
+                this.destinationX = this.generateLandedPositionX();
+                this.destinationY = this.generateLandedPositionY();
+              }
+            }
+            const newDx = this.destinationX - this.x;
+            const newDy = this.destinationY - this.y;
+            const dist = Math.sqrt(newDx * newDx + newDy * newDy);
+            if (dist < 3) {
+              this.x = this.destinationX;
+              this.y = this.destinationY;
+              this.destinationX = this.generateLandedPositionX();
+              this.destinationY = this.generateLandedPositionY();
+              return;
+            }
+            this.x += (newDx / dist) * this.speed * deltaTime;
+            this.y += (newDy / dist) * this.speed * deltaTime;
+          }
+          if (this.parent) {
+            ctx.strokeStyle = "#000";
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.parent.x, this.parent.y);
+            ctx.stroke();
+          }
+          if (this.parent) {
+            const baseX = this.parent.x + this.offsetX;
+            const baseY = this.parent.y + this.offsetY;
+            const floatX =
+              baseX + Math.sin(Date.now() / 700 + this.landedOrder) * 3;
+            const floatY =
+              baseY + Math.cos(Date.now() / 900 + this.landedOrder) * 3;
+            // 缓动靠近浮动点
+            this.x += (floatX - this.x) * 0.1;
+            this.y += (floatY - this.y) * 0.1;
             return;
           }
         }
@@ -150,13 +226,15 @@
       const paratrooperList = new Array(100)
         .fill(0)
         .map(() => new Paratrooper());
-      console.log(paratrooperList);
-      function animate() {
-        // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      let lastTime = performance.now();
+      function animate() {
+        const now = performance.now();
+        const delta = now - lastTime;
+        lastTime = now;
         drawBackground(); // 清屏
         for (let p of paratrooperList) {
-          p.update(); // 如果 update 之后要处理运动
+          p.update(delta / 1000); // 如果 update 之后要处理运动
           p.draw();
         }
         requestAnimationFrame(animate);
