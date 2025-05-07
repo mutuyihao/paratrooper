@@ -22,25 +22,58 @@
         height: 100vh;
         background-color: #ccc;
       }
-      .btnBox {
+      .controller {
         position: absolute;
-        top: 2.5vh;
-        left: 50%;
-        transform: translateX(-50%);
+        z-index: 9999;
+        top: 5vh;
+        left: 5vh;
+        background-color: #eee;
+        border-radius: 1rem;
+      }
+      #header {
+        background-color: #aaa;
+        padding: 4px 10px;
+        font-size: 1.3rem;
+      }
+      #header:hover {
+        cursor: move;
+      }
+      #content {
+        padding: 10px;
+      }
+      #content div {
+        margin-bottom: 10px;
+        padding-top: 8px;
+      }
+      .btnBox {
+        display: flex;
+        justify-content: space-evenly;
       }
       .btnBox button {
         width: 3rem;
         height: 2rem;
-        margin-right: 10px;
       }
     </style>
   </head>
   <body>
     <div id="container">
       <canvas id="canvas" width="1200" height="900"></canvas>
-      <div class="btnBox">
-        <button id="start">start</button>
-        <button id="stop">stop</button>
+
+      <div class="controller" id="controller">
+        <div id="header">
+          <h5>控制面板</h5>
+        </div>
+        <div id="content">
+          <div>人数：100 人</div>
+          <div>飞行速度：50 px/s</div>
+          <div>行动速度：15 px/s</div>
+          <div>间距Z：30 px</div>
+          <div>间距z：小于 30 px</div>
+          <div class="btnBox">
+            <button id="start">start</button>
+            <button id="stop">stop</button>
+          </div>
+        </div>
       </div>
     </div>
     <script>
@@ -56,6 +89,28 @@
       document.getElementById("stop").addEventListener("click", () => {
         controller.start = false;
         controller.stop = true;
+      });
+
+      let isDragging = false;
+      let mouseOffsetX = 0;
+      let mouseOffsetY = 0;
+      const controllerRef = document.getElementById("controller");
+      document.getElementById("header").addEventListener("mousedown", (e) => {
+        isDragging = true;
+        const rect = controllerRef.getBoundingClientRect();
+        mouseOffsetX = e.clientX - rect.left;
+        mouseOffsetY = e.clientY - rect.top;
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (isDragging) {
+          controllerRef.style.top = `${e.clientY - mouseOffsetY}px`;
+          controllerRef.style.left = `${e.clientX - mouseOffsetX}px`;
+        }
+      });
+
+      document.addEventListener("mouseup", () => {
+        isDragging = false;
       });
       //获取canvas
       const canvas = document.getElementById("canvas");
@@ -193,6 +248,36 @@
             this.x += (newDx / dist) * this.speed * deltaTime;
             this.y += (newDy / dist) * this.speed * deltaTime;
           }
+          if (this.parent && this.children.length > 0) {
+            for (let child of this.children) {
+              child.parent = this.parent;
+            }
+          }
+          if (this.parent) {
+            const leader = this.parent;
+
+            // 计算与 leader 的距离
+            const dx = leader.x - this.x;
+            const dy = leader.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // 想要维持的距离范围（比如 20px）
+            const desiredDist = 20;
+
+            // 若距离过大，向 leader 靠近
+            if (dist > 30) {
+              const ratio = (dist - desiredDist) / dist;
+              this.x += dx * ratio * 0.1; // 0.1 是缓动系数
+              this.y += dy * ratio * 0.1;
+            }
+
+            // 若距离太小，稍微推开一点
+            else if (dist < 5) {
+              const ratio = (desiredDist - dist) / dist;
+              this.x -= dx * ratio * 0.1;
+              this.y -= dy * ratio * 0.1;
+            }
+          }
           if (this.parent) {
             ctx.strokeStyle = "#000";
             ctx.beginPath();
@@ -207,7 +292,6 @@
               baseX + Math.sin(Date.now() / 700 + this.landedOrder) * 3;
             const floatY =
               baseY + Math.cos(Date.now() / 900 + this.landedOrder) * 3;
-            // 缓动靠近浮动点
             this.x += (floatX - this.x) * 0.1;
             this.y += (floatY - this.y) * 0.1;
             return;
@@ -271,9 +355,9 @@
         if (controller.stop) {
         }
         if (controller.start && !controller.stop) {
-          drawBackground(); // 清屏
+          drawBackground();
           for (let p of paratrooperList) {
-            p.update(delta / 1000); // 如果 update 之后要处理运动
+            p.update(delta / 1000);
             p.draw();
           }
         }
